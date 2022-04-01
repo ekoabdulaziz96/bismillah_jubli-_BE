@@ -1,0 +1,5 @@
+[run]
+omit=
+    venv/*
+    server.py
+    app.py
