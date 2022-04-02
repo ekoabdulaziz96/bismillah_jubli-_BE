@@ -120,3 +120,4 @@ dmypy.json
 
 tox.ini
 htmlcov/*
+celerybeat-schedule*

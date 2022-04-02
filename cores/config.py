@@ -17,6 +17,11 @@ class Config:
     CACHE_DEFAULT_TIMEOUT = 600     # seconds -> 10 minutes
     CACHE_REDIS_URL = env.str("CACHE_REDIS_URL", default=None)
 
+    CELERY_TIMEZONE = env.str("CELERY_TIMEZONE", "Europe/Berlin")
+    CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", "redis://localhost:6379/0")
+    CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+    CELERY_SEND_SENT_EVENT = True
+
 class ProductionConfig(Config):
     ENV = 'production'
     DEVELOPMENT = False

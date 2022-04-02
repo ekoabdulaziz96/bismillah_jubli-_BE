@@ -90,3 +90,8 @@ start-app.sh        # setting bash script to run app
 - this project is create and inspire from flask cookiecuter: https://github.com/cookiecutter-flask/cookiecutter-flask and other 
 - The goal is to build blueprint/skeleton microservices project for RESTfull API
 - author: ekoabdulaziz96@gmail.com
+
+
+$env:FORKED_BY_MULTIPROCESSING=1
+celery -A server.celery worker --loglevel INFO
+celery -A server.celery beat --loglevel INFO
