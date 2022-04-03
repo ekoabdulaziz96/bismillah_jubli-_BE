@@ -19,7 +19,7 @@ class Helper(object):
     def reset_dummy_data_in_email(cls):
         """clear all dummy data email in DB
         """
-        email_list = EmailQuery.get_filter_by_email_subject(email_subject=EMAIL_SUBJECT_TEST)
+        email_list = EmailQuery.get_all_filter_by_email_subject(email_subject=EMAIL_SUBJECT_TEST)
         for email_orm in email_list:
             email_orm.delete()
 
@@ -36,7 +36,7 @@ class Helper(object):
         self.assertIsInstance(message_data.get('email_content'), str)
 
         self.assertIsInstance(message_data.get('timestamp'), str)
-        self.assertIsInstance(datetime.strptime(message_data.get('timestamp'), '%d %b %Y %H:%M'), datetime)
+        self.assertIsInstance(datetime.strptime(message_data.get('timestamp'), const.ConstEmail.FORMAT_TIMESTAMP), datetime)
         self.assertIsInstance(message_data.get('status'), str)
 
     @classmethod
@@ -72,6 +72,7 @@ class TestEmailSave(ParentTestCase, ParentPostTestService):
 
         #### origin test case
         - [-] invalid schema payload for timestamp format
+        - [-] invalid schema payload for timestamp value
         - [+] success save email
         - [-] fail save email cz event_id already exist
         -----
@@ -107,7 +108,6 @@ class TestEmailSave(ParentTestCase, ParentPostTestService):
         self.payload = testSchEmails.EMAIL_PAYLOAD_MANDATORY.copy()
         self.payload['event_id'] = random.randint(49999, 99999)
         self.payload['email_subject'] = self.email_subject
-        self.payload['timestamp'] = "15 Dec 2015 23:12"
 
         self.init_serialize = list(schEmails.EmailSchemaSerializer.Meta.fields)
 
@@ -135,7 +135,27 @@ class TestEmailSave(ParentTestCase, ParentPostTestService):
         # validate value message data
         for errData in message_data:
             self.assertIn(key, errData.values())
-            self.assertEqual(errData.get('description'), schEmails.MESSAGE_INVALID_TIMESTAMP)
+            self.assertEqual(errData.get('description'), schEmails.MESSAGE_INVALID_TIMESTAMP_FORMAT)
+
+        # TEAR_DOWN_LOCAL
+        self.payload[key] = old_value
+
+    def test_invalid_schema_payload_for_timestamp_value(self):
+        # prepare data
+        key = 'timestamp'
+        old_value = self.payload[key]
+        self.payload[key] = "15 Dec 2015 23:12"
+
+        # do request
+        response = self._doTestAndValidateExceptMessageData(test='error', message_code='INVALID_REQUEST_PARAMETER')
+
+        # validate message data
+        message_data = response.get('message_data')
+        self.assertNotEqual(message_data, {})
+        # validate value message data
+        for errData in message_data:
+            self.assertIn(key, errData.values())
+            self.assertEqual(errData.get('description'), schEmails.MESSAGE_INVALID_TIMESTAMP_VALUE)
 
         # TEAR_DOWN_LOCAL
         self.payload[key] = old_value

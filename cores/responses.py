@@ -46,25 +46,6 @@ class Response():
         return record_prev
 
 
-def process_response_error(message_code: str):
-    error_resp = dict()
-
-    errors = RESPONSE_ERROR.get(message_code)
-
-    if errors:
-        error_resp['status'] = errors.get('status')
-        error_resp['code'] = errors.get('code')
-        error_resp['message'] = errors.get('message')
-
-    return error_resp
-
-def construct_error_message(response: Response, code: str):
-    error_resp = process_response_error(code)
-    response.put('status', error_resp.get('code'))
-    response.put('desc', error_resp.get('message'))
-
-    return response, error_resp.get('status')
-
 def wrap_error_message_schema(err_messages: Dict):
     array_resp = list()
     for key, value in err_messages.items():

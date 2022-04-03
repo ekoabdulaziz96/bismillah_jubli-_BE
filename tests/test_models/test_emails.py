@@ -1,7 +1,7 @@
 import pytz
 from datetime import datetime, timedelta
 
-from cores import (utils)
+from cores import (utils, constants as const)
 # ------------------------------ ORM models
 from models.emails import (Email as EmailORM, EmailStatusChoices, EmailQuery)
 from models.user_recipients import (UserRecipient, UserRecipientQuery)
@@ -14,54 +14,27 @@ EMAIL = 'EMAIL_TEST@gmail.com'
 EMAIL_SUBJECT = 'EMAIL_SUBJECT_TEST'
 
 # ----------------------------------------------------------------------------------
-# -------------------------------------------------------test scenario for manage financial data
-class TestModelForFinancial(ParentTestCase):
+# -------------------------------------------------------helper
+class Helper:
+    """ Helper class for manage send email
     """
-        Scenario Test
-        - [+] manage routing
-        -----
-        Note:
-        1. [+] for positive test || [-] for negative test || [...]P for common test function and written in parent
-        2. ...
-    """
-
     @classmethod
-    def setUpClass(cls):
-        """ call once a time, before setUp and test_* """
-        super(TestModelForFinancial, cls).setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        """ call once a time, after setUp and test_*  """
-        super(TestModelForFinancial, cls).tearDownClass()
-
-    def setUp(self):
-        ''' auto called before current test_* is calling '''
-
-        self.db.session.rollback()
-
-    def tearDown(self):
-        ''' auto called after current test_* is calling '''
-        pass
-
-    # -----------------------------------------------------------------------------
-    # -------------------------------------------------------------FUNCTION HELPER
-    # -------------------------------------------------------------
-    def _set_dummy_email(self, event_id: str) -> EmailORM:
+    def _set_dummy_email(cls, self: object, event_id: str, timestamp: str = '30 Apr 2022 23:12') -> EmailORM:
         """ create dummy data for email
+        :self -> unittest obj
         :event_id -> event_id input data (unique)
+        :timestamp -> timestamp input data
         """
 
         email_orm = EmailQuery.get_one_filter_by_event_id(event_id=event_id)
         # check data, if not exist yet
         if email_orm is None:
-            tz_singapore = utils.get_timezone(timezone="Asia/Singapore")
-            dt_input = datetime.strptime('30 Apr 2022 23:12', '%d %b %Y %H:%M')
+            dt_input = datetime.strptime(timestamp, const.ConstEmail.FORMAT_TIMESTAMP)
             dt_normalize = (dt_input - timedelta(hours=8)).replace(tzinfo=pytz.UTC)
 
             payload = dict(
                 event_id=event_id,
-                email_subject=self._generate_random_string(15),
+                email_subject=EMAIL_SUBJECT,
                 email_content=self._generate_random_string(50),
                 timestamp=dt_normalize,
 
@@ -72,10 +45,9 @@ class TestModelForFinancial(ParentTestCase):
             email_orm.save()
 
             # validate timestamp saved
-            dt_loaded = utils.convert_datetime_to_specific_timezone(datetime=email_orm.timestamp, timezone=tz_singapore)
-            dt_now = datetime.now(tz=tz_singapore)
-
-            self.assertGreater(dt_loaded, dt_now)
+            dt_loaded = utils.convert_datetime_to_specific_timezone(datetime=email_orm.timestamp, timezone=self.tz_singapore) + timedelta(minutes=1)
+            dt_now = datetime.now(tz=self.tz_singapore)
+            self.assertGreaterEqual(dt_loaded, dt_now)
 
             # validate data db
             del payload['timestamp']
@@ -86,8 +58,10 @@ class TestModelForFinancial(ParentTestCase):
 
         return email_orm
 
-    def _set_dummy_user_recipient(self, email: str) -> UserRecipient:
+    @classmethod
+    def _set_dummy_user_recipient(cls, self: object, email: str) -> UserRecipient:
         """ create dummy data for user_recipient
+        :self -> unittest obj
         :email -> email input data (unique)
         """
 
@@ -109,8 +83,10 @@ class TestModelForFinancial(ParentTestCase):
 
         return recipient_orm
 
-    def _set_dummy_email_history(self, email_orm: EmailORM, recipient_orm: UserRecipient) -> EmailHistory:
+    @classmethod
+    def _set_dummy_email_history(cls, self: object, email_orm: EmailORM, recipient_orm: UserRecipient) -> EmailHistory:
         """ create dummy data for email_history
+        :self -> unittest obj
         :email_orm -> ORM for email
         :recipient_orm -> ORM for user_recipient
         """
@@ -136,17 +112,81 @@ class TestModelForFinancial(ParentTestCase):
 
         return email_history_orm
 
+    @classmethod
+    def _reset_dummy_data_email(cls):
+        email_orm_list = EmailQuery.get_all_filter_by_email_subject(email_subject=EMAIL_SUBJECT)
+        if len(email_orm_list) > 0:
+            for email_orm in email_orm_list:
+                email_orm.delete()
+
+# -------------------------------------------------------test scenario for send email
+class TestModelForScenarionSendEmail(ParentTestCase):
+    """ == Class Test Model (ORM) for scenarion send email == \n
+        Scenario Test
+        - [+] email query function for filter by current datetime with tz singapore
+        - [+] manage notif email
+        -----
+        Note:
+        1. [+] for positive test || [-] for negative test || [...]P for common test function and written in parent
+        2. ...
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """ call once a time, before setUp and test_* """
+        super(TestModelForScenarionSendEmail, cls).setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        """ call once a time, after setUp and test_*  """
+        super(TestModelForScenarionSendEmail, cls).tearDownClass()
+
+        # Cleaning email
+        Helper._reset_dummy_data_email()
+
+    def setUp(self):
+        ''' auto called before current test_* is calling '''
+
+        self.db.session.rollback()
+        self.tz_singapore = utils.get_timezone(timezone="Asia/Singapore")
+
+    def tearDown(self):
+        ''' auto called after current test_* is calling '''
+        pass
+
+    # -----------------------------------------------------------------------------
+    # -------------------------------------------------------------FUNCTION HELPER
+    # -
     # -------------------------------------------------------------
     # -------------------------------------------------------------FUNCTION CONSUME
+    def test_email_query_function_for_filter_by_current_datetime_with_tz_singapore(self):
+        # prepare data
+        timestamp = (datetime.now(tz=self.tz_singapore)).strftime(const.ConstEmail.FORMAT_TIMESTAMP)
+        timestamp_plus = (datetime.now(tz=self.tz_singapore) + timedelta(hours=1)).strftime(const.ConstEmail.FORMAT_TIMESTAMP)
+        email_orm_1 = Helper._set_dummy_email(self=self, event_id=-1, timestamp=timestamp)
+        email_orm_2 = Helper._set_dummy_email(self=self, event_id=-2, timestamp=timestamp)
+        email_orm_3 = Helper._set_dummy_email(self=self, event_id=-3, timestamp=timestamp_plus)
+
+        email_orm_list = EmailQuery.get_all_filter_by_current_datetime_tz_singapore()
+        self.assertIsNotNone(email_orm_list)
+        self.assertEqual(len(email_orm_list), 2)
+        self.assertEqual(email_orm_1, email_orm_list[0])
+        self.assertEqual(email_orm_2, email_orm_list[1])
+
+        # TEAR_DOWN_LOCALLY
+        email_orm_1.delete()
+        email_orm_2.delete()
+        email_orm_3.delete()
+
     def test_manage_notif_email(self):
         # prepare data
-        email_orm_1 = self._set_dummy_email(event_id=999999)
-        email_orm_2 = self._set_dummy_email(event_id=999998)
+        email_orm_1 = Helper._set_dummy_email(self=self, event_id=-4)
+        email_orm_2 = Helper._set_dummy_email(self=self, event_id=-5)
 
-        recipient_orm = self._set_dummy_user_recipient(email=EMAIL)
+        recipient_orm = Helper._set_dummy_user_recipient(self=self, email=EMAIL)
 
-        email_history_orm_1 = self._set_dummy_email_history(email_orm=email_orm_1, recipient_orm=recipient_orm)
-        email_history_orm_2 = self._set_dummy_email_history(email_orm=email_orm_2, recipient_orm=recipient_orm)
+        email_history_orm_1 = Helper._set_dummy_email_history(self=self, email_orm=email_orm_1, recipient_orm=recipient_orm)
+        email_history_orm_2 = Helper._set_dummy_email_history(self=self, email_orm=email_orm_2, recipient_orm=recipient_orm)
 
         # cek print (method __repr__)
         print(email_orm_1)

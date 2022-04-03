@@ -1,6 +1,9 @@
 
 import enum
 from typing import List
+from datetime import datetime, timedelta
+
+from cores import (utils, constants as const)
 from cores.databases import (Column, PkModelWithManageAttr, db, relationship, generate_id)
 
 MAX_EMAIL_SUBJECT = 100
@@ -30,6 +33,14 @@ class Email(PkModelWithManageAttr):
     # one to many relations
     email_histories = relationship("EmailHistory", backref="email", lazy="dynamic")
 
+    __table_args__ = (
+        # Constrain Indexes
+        db.Index(
+            'email_idx_for_need_to_process',                         # Index name
+            status, timestamp.asc()    # Columns which are part of the index
+        ),
+    )
+
     def __repr__(self):
         """Represent instance as a unique string."""
         return f"EMAIL [{self.event_id}] {self.email_subject[:25]}..."
@@ -40,14 +51,25 @@ class EmailQuery(object):
 
     @classmethod
     def get_one_filter_by_event_id(cls, event_id: str) -> Email:
-        """read data filter by `event_id`
+        """read one data filter by `event_id`
         :event_id -> event_id value for filter data
         """
         return Email.query.filter_by(event_id=event_id).first()
 
     @classmethod
-    def get_filter_by_email_subject(cls, email_subject: str) -> List[Email]:
-        """read data filter by `email_subject`
+    def get_all_filter_by_email_subject(cls, email_subject: str) -> List[Email]:
+        """read all data filter by `email_subject`
         :email_subject -> email_subject value for filter data
         """
         return Email.query.filter_by(email_subject=email_subject).all()
+
+    @classmethod
+    def get_all_filter_by_current_datetime_tz_singapore(cls) -> List[Email]:
+        """read all data filter by `datetime_now`
+        :datetime_now -> datetime_now value for filter data
+        """
+        tz_singapore = utils.get_timezone('Asia/Singapore')
+        dt_now_str = (datetime.now(tz=tz_singapore) - timedelta(hours=8)).strftime(const.ConstEmail.FORMAT_TIMESTAMP)
+        dt_now = datetime.strptime(dt_now_str, const.ConstEmail.FORMAT_TIMESTAMP)
+
+        return Email.query.filter_by(timestamp=dt_now).filter_by(status=EmailStatusChoices.OPEN).all()

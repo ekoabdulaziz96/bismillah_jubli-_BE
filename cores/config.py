@@ -22,6 +22,14 @@ class Config:
     CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
     CELERY_SEND_SENT_EVENT = True
 
+    MAIL_SERVER = 'smtp.gmail.com'
+    MAIL_PORT = 465
+    MAIL_USERNAME = env.str("MAIL_USERNAME", default=None)
+    MAIL_PASSWORD = env.str("MAIL_PASSWORD", default=None)
+    MAIL_DEFAULT_SENDER = env.str("MAIL_DEFAULT_SENDER", default=None)
+    MAIL_USE_TLS = False
+    MAIL_USE_SSL = True
+
 class ProductionConfig(Config):
     ENV = 'production'
     DEVELOPMENT = False

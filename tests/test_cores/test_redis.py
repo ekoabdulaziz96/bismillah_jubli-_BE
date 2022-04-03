@@ -6,17 +6,25 @@ from cores.extensions import cache
 
 # ---------------------------------------------------------------------------------------------------
 # --------------------------------------------------------------- Test Connection to NoSQL Databases
-class TestRedisConnection(unittest.TestCase):
+class TestCacheConnection(unittest.TestCase):
+    """ == Class Test for core Memory Chache connection == \n
+
+        Scenario Test
+        - [+] test success chache
+        -----
+        Note: [+] for positive test || [-] for negative test || [...]P for common test function and written in parent
+    """
+
     @classmethod
     def setUpClass(cls):
         """ call once a time """
-        super(TestRedisConnection, cls).setUpClass()
+        super(TestCacheConnection, cls).setUpClass()
         # instance app Flask and client
         cls.app = server.app
         cls.app.debug = True
         cls.client = cls.app.test_client()
 
-    def test_cache(self):
+    def test_success_cache(self):
         cache.init_app(self.app)
 
         result = cache.set('name_key', 'custom_value', 1)     # key, valvue, timeout in seconds

@@ -3,3 +3,4 @@
 
 from .test_databases import *
 from .test_redis import *
+from .test_emails import *

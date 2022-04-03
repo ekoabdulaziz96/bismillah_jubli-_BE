@@ -1,6 +1,3 @@
-import pytz
-from datetime import timedelta
-
 from cores import (responses as respHelper)
 from models.emails import (Email as mdlEmail, EmailStatusChoices, EmailQuery)
 from schemas import (emails as schEmails)
@@ -40,9 +37,6 @@ class EmailSave(PostController):
         self.email_subject = self.valid_payload.get('email_subject', None)
         self.email_content = self.valid_payload.get('email_content', None)
         self.timestamp = self.valid_payload.get('timestamp', None)
-
-        # normalize timestamp
-        self.timestamp = (self.timestamp - timedelta(hours=8)).replace(tzinfo=pytz.UTC)
 
     def _process_validate_is_event_id_exist(self):
         """process validate is event_id exist or not"""

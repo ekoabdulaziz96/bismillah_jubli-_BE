@@ -1,7 +1,9 @@
 import enum
+from typing import List
 from cores.databases import (Column, PkModelWithManageAttr, db, generate_id, reference_col)
 
 MAX_HISTORY_ID = 32
+MAX_MESSAGE = 255
 
 
 class EmailHistoryStatusChoices(enum.Enum):
@@ -22,6 +24,8 @@ class EmailHistory(PkModelWithManageAttr):
     history_id = Column(db.String(MAX_HISTORY_ID), unique=True, nullable=False, default=generate_id)
     status = Column('status', db.Enum(EmailHistoryStatusChoices, name="email_history_status_choices_enum"))
 
+    message = Column(db.String(MAX_MESSAGE), nullable=True)
+
     # many to one relations
     email_id = reference_col("emails", nullable=False)
     user_recipient_id = reference_col("user_recipients", nullable=False)
@@ -36,15 +40,22 @@ class EmailHistoryQuery(object):
 
     @classmethod
     def get_one_filter_by_history_id(cls, history_id: str) -> EmailHistory:
-        """read data filter by `history_id`
+        """read one data filter by `history_id`
         :history_id -> history_id value for filter data
         """
         return EmailHistory.query.filter_by(history_id=history_id).first()
 
     @classmethod
     def get_one_filter_by_emailID_and_userRecipientID(cls, email_id: str, user_recipient_id: str) -> EmailHistory:
-        """read data filter by `email_id` and `user_recipient_id`
+        """read one data filter by `email_id` and `user_recipient_id`
         :email_id -> email_id value for filter data
         :user_recipient_id -> user_recipient_id value for filter data
         """
         return EmailHistory.query.filter_by(email_id=email_id).filter_by(user_recipient_id=user_recipient_id).first()
+
+    @classmethod
+    def get_all_filter_by_email_id(cls, email_id: str) -> List[EmailHistory]:
+        """read all data filter by `email_id`
+        :email_id -> email_id value for filter data
+        """
+        return EmailHistory.query.filter_by(email_id=email_id).all()

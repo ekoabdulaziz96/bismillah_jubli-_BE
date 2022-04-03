@@ -1,7 +1,8 @@
-from datetime import datetime
-import unittest
 import random
+import unittest
+from datetime import datetime, timedelta
 
+from cores import (constants as const)
 from models import (emails as mdlEmails)
 from schemas import (emails as schEmails)
 from .parents import (ParentTestSchema)
@@ -15,7 +16,7 @@ EMAIL_PAYLOAD_MANDATORY = dict(
     event_id=random.randint(49999, 99999),
     email_subject=random_str,
     email_content=random_str,
-    timestamp="15 Dec 2015 23:12"
+    timestamp=(datetime.now() + timedelta(hours=2)).strftime(const.ConstEmail.FORMAT_TIMESTAMP)
 )
 
 # ----------------------------------------------------------------------
@@ -32,8 +33,9 @@ class TestEmailRequestSchema(unittest.TestCase, ParentTestSchema):
         #### origin test case
         - [-] test payload with invalid negative value of event_id
         - [-] test payload with invalid max length of email_subject
-        - [-] test payload with invalid timestamp format
         - [-] test payload with invalid timestamp cz not sended
+        - [-] test payload with invalid timestamp format
+        - [-] test payload with invalid timestamp value
 
         -----
         Note: [+] for positive test || [-] for negative test || [...]P for common test function and written in parent
@@ -93,17 +95,6 @@ class TestEmailRequestSchema(unittest.TestCase, ParentTestSchema):
         key = 'email_subject'
         self._invalidMaxLengthPayload(key=key, maxLength=mdlEmails.MAX_EMAIL_SUBJECT)
 
-    def test_payload_with_invalid_timestamp_format(self):
-        # prepare invalid data
-        key = 'timestamp'
-        old_value = self.payload_full[key]
-        self.payload_full[key] = self.getRandomString(15)
-
-        self._invalidValidatePayload(data=self.payload_full, key=key, err_message=schEmails.MESSAGE_INVALID_TIMESTAMP)
-
-        # tear down locally
-        self.payload_full[key] = old_value
-
     def test_payload_with_invalid_timestamp_cz_not_sended(self):
         # prepare invalid data
         key = 'timestamp'
@@ -111,6 +102,28 @@ class TestEmailRequestSchema(unittest.TestCase, ParentTestSchema):
         del self.payload_full[key]
 
         self._invalidValidatePayload(data=self.payload_full, key=key, err_message=self.err_message_missing_required)
+
+        # tear down locally
+        self.payload_full[key] = old_value
+
+    def test_payload_with_invalid_timestamp_format(self):
+        # prepare invalid data
+        key = 'timestamp'
+        old_value = self.payload_full[key]
+        self.payload_full[key] = self.getRandomString(15)
+
+        self._invalidValidatePayload(data=self.payload_full, key=key, err_message=schEmails.MESSAGE_INVALID_TIMESTAMP_FORMAT)
+
+        # tear down locally
+        self.payload_full[key] = old_value
+
+    def test_payload_with_invalid_timestamp_value(self):
+        # prepare invalid data
+        key = 'timestamp'
+        old_value = self.payload_full[key]
+        self.payload_full[key] = "15 Dec 2015 23:12"
+
+        self._invalidValidatePayload(data=self.payload_full, key=key, err_message=schEmails.MESSAGE_INVALID_TIMESTAMP_VALUE)
 
         # tear down locally
         self.payload_full[key] = old_value
