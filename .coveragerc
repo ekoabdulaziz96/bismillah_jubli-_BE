@@ -3,3 +3,5 @@ omit=
     venv/*
     server.py
     app.py
+    seeders/*
+    cores/config*.py

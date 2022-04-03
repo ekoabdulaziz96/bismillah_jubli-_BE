@@ -9,7 +9,7 @@ from models import (emails as mdlEmails)
 # ---------------------------------------------STATIC VALUE
 MESSAGE_POSITIVE_MIN_ONE = "input value must be greater than 0"
 MESSAGE_INVALID_TIMESTAMP_FORMAT = "please check your Timestamp format `Day Month Year Hour:Minute`, ex: '15 Dec 2015 23:12'"
-MESSAGE_INVALID_TIMESTAMP_VALUE = "please set the timestamp schedule at least 5 minutes earlier"
+MESSAGE_INVALID_TIMESTAMP_VALUE = f"please set the timestamp schedule at least {const.ConstEmail.THRESHOLD_TIMESTAMP} minutes earlier"
 
 # -------------------------------------------------------------------- EMAILS
 # -------------------------- CLASS SCHEMA

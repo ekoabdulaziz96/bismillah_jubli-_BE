@@ -9,42 +9,115 @@ application for manage Notification
 
 
 ## How to run
-Make sure you already installed **python3.8** in your machine
+Make sure you already installed **python3.8** or higher in your machine
 
-1. Create your virtualenv and activate
-2. Install library `pip install -r requirements.txt`
+1. Create your virtualenv and activate (if you are using virtuanenv)
+2. Install library 
+    ```sh
+    pip install -r requirements.txt
+    ```
 3. Move your root path to this project
-4. make config.py file in `./cores` directory  
-duplicate `config_dev/stag/prod.py` file and rename as config.py
-5. init flask migrate file location `flask db init -d 'models/migrations'`
-    <br> if not yet and only for the first time, check `./models/migrations`
-6. run server command `sh ./start-app.sh` 
+    ```sh
+    cd core-notif
+    ```
+4. make .env file, you can duplicate it from .env.dev and rename it to .env
+    - you can edit the value for your own environment IP/port or something else
+    - recommend to use some environment with developer, we use docker that inclue `PostgreSQL, Adminer, Redis`
+    - step to run container docker
+        ```sh
+        # change directory to docs
+        cd docs
 
-### How to run server manually
-1. set your Env Variabel key for `Flask_APP` and `FLASK_ENV` 
-    <br> `$env:FLASK_APP="server.py"`
-    <br> `$env:FLASK_ENV="development"`
-2. migrate your db
-    <br> `flask db upgrade -d 'models/migrations'`
-3. run server
-    <br> `flask run --host=0.0.0.0 --port=63000`
+        # run docker compose
+        docker-compose -f .\postgres_redis.yml up -d
+        ```
+    - step to turn off container docker
+        ```sh
+        # turn off docker compose
+        docker-compose -f .\postgres_redis.yml down
+        ```
+    - make sure the DB is already created, 
+        - you can open adminer in your browser with url `http://localhost:8080/`
+        - login with credential:
+            - sistem = PostgreSQL
+            - server = postgresDocker
+            - pengguna = postgres
+            - sandi = postgres
+        - check the the DB `db_notification` is exist or not, 
+            - you can create it, if not exist
+    - make sure your .env file is corrent value
+        - FLASK_ENV : value ['development', 'staging', 'production']
+        - MAIL_* value, if you want to change it make sure your account is less security and activate IMAP
+    
+5. run migraton file
+    ```sh
+    flask db upgrade -d 'models/migrations'
+    ```
+6. seed data in DB
+    ```sh
+    # maske sure your root terminal is */core-notif/
+    # seed data user recipient
+    python .\seeders\seed_user_recipients.py
+    ```
+7. run server flask
+    ```sh
+    # maske sure your root terminal is */core-notif/
+    flask run
+    ```
+8. run server celery worker
+    ```sh
+    # create new terminal and activate the virtualenv
+    # maske sure your root terminal is */core-notif/
+    
+    # celery worker
+    celery -A server.celery worker--loglevel INFO
 
-### How to connect DB locally
-Set your Env Variable key for `DATABASE_URL` 
-<br> ex : `$env:DATABASE_URL="postgresql://username:password@host:port/db_name"`
+    # celery worker on windows user, `--pool solo`
+    celery -A server.celery worker --pool solo --loglevel INFO
+    ```
+
+9. run server celery beat (scheduler)
+    ```sh
+    # create new terminal and activate the virtualenv
+    # maske sure your root terminal is */core-notif/
+    # maske sure to run celery worker first
+
+    # celery beat
+    celery -A server.celery beat --loglevel INFO
+    ```
+
+### Need to know
+- threshold of timestamp (like delta current_time with input_timestamp) for now is 5 minutes 
+<br> you can change it in module `cores/constant` class `ConstEmail` for attribut `THRESHOLD_TIMESTAMP`
+     ```
+    THRESHOLD_TIMESTAMP = 1     # minutes
+    ```
+
+
+### How to set connection DB
+Set your .env file for variable key for `SQLALCHEMY_DATABASE_URI` 
+<br> ex : `SQLALCHEMY_DATABASE_URIL="postgresql://username:password@host:port/db_name"`
 <br><br>
 
 ### How to Manage ORM DB 
-1. make migrate file (alembic), for any change in your models
-    <br>`flask db migrate -d 'models/migrations' -m 'message'`
-    <br> recheck your migrate file in `./models/migrations/versions`, cz cannot detect rename table/column automatically.
-2. execute migration for your change in db
-    <br>`flask db upgrade -d 'models/migrations'`
+1. only for the first time, when you create migration file
+    ``` sh
+    flask db init -d 'models/migrations'
+    ```
+2. make migrate file (alembic), for any change in your models
+    ``` sh
+    flask db migrate -d 'models/migrations' -m 'custom_message'
+    ```
+    <br> re-check your migrate file in `./models/migrations/versions`, cz cannot detect rename table/column automatically.
+3. execute migration for your change in db
+    ``` sh
+    flask db upgrade -d 'models/migrations'
+    ```
 
-after make ORM class for table [`path: ./models]
+    after make ORM class for table [`path: ./models]
 <br> make sure your ORM class is registered in table rageister
 [`path: ./models/register_tables.py`]
-<br> if your new ORM class isnot reistered, you cann't migrate your db
+<br> if your new ORM class is not registered yet, you cann't migrate your db
 <br><br>
 
 
@@ -53,29 +126,49 @@ all of unit test all saved in `tests` folder.
 
 1. Python unittest 
 <br>You can run unit test by executing this command 
-<br> `python -m unittest -v tests.{module}`
-<br> ex : `python -m unittest -v ./tests.services.moduleName.className.functionName`
+    ``` sh
+    # run all unittest
+    python -m unittest -v tests
 
+    # run specific unittest
+    # python -m unittest -v tests.services.moduleName.className.functionName
+    # ex:
+    python -m unittest -v tests.test_models.test_emails.TestModelForScenarionSendEmail.test_email_query_function_for_filter_by_current_datetime_with_tz_singapore
+    ```
 2. Coverage
-      * `coverage run --source='.' --rcfile='.coveragerc' -m unittest -v tests`
-      * `coverage report`
-      * `coverage html`
+    ``` sh
+    # run all test
+    # you can skip module/file in .coveragerc file
+    coverage run --source='.' --rcfile='.coveragerc' -m unittest -v tests
+
+    # make report
+    coverage report
+
+    # make html report
+    coverage html
+    # you can open it in browser with url input is complete path of htmlcov
+    # ex: E:\core-notif\htmlcov
+    ```
 <br><br>
 
 ### Linting
-
-`flake8 --config='.pep8'`
-<br><br>
+```sh
+# you can also you extension for linting like .cornflakes-linter in VSCode
+flake8 --config='.pep8'
+```
+    
+<br>
 
 
 ### Direktory explaination:
 ```sh
-./code_executes     # place for code to run independently
 ./cores             # place for config, static data, common function 
+./docs              # place for documentation and important file environment
 ./models            # place for ORM models and place migration file 
 __./migrations      # place migration file 
+./schemas           # place for schema validation and serializetion
+./seeder            # place for seed data for aplication
 ./services          # place for controller, modules that run service
-./settings          # place for setting env, instance librabry 
 ./tests             # place for unittest
 ./urls              # place for url route
 .coveragerc         # setting data coverage
@@ -92,6 +185,3 @@ start-app.sh        # setting bash script to run app
 - author: ekoabdulaziz96@gmail.com
 
 
-$env:FORKED_BY_MULTIPROCESSING=1
-celery -A server.celery worker --loglevel INFO
-celery -A server.celery beat --loglevel INFO
